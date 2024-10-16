@@ -15,5 +15,16 @@ class Ticket(Base):
     description = Column(String(500), nullable=True)
     status = Column(Boolean, default=True, nullable=False)
     type = Column(String(50), nullable=False)
-    assigned_to = Column(String(50), nullable=True)
     price = Column(Float, nullable=False)
+
+
+class UserTicket(Base):
+    __tablename__ = "user_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    ticket_id = Column(Integer, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    total_price = Column(Float, nullable=False)
+    created_at = Column(String(500), nullable=False)
+    updated_at = Column(String(500), nullable=False)
