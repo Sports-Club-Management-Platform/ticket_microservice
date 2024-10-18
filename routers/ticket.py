@@ -6,11 +6,17 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from db.database import get_db
 
-from models.ticket import Ticket as TicketModel, UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB, UserTicketCreate, UserTicketUpdate, UserTicketInDB
-from repositories.ticketRepo import buy_ticket, get_tickets_by_user_id, get_ticket_by_id, get_tickets_by_game_id, get_tickets
+from models.ticket import Ticket as TicketModel
+from models.userticket import UserTicket as UserTicketModel
+from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
+from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from crud.ticket import buy_ticket, get_tickets_by_user_id, get_ticket_by_id, get_tickets_by_game_id, get_tickets, post_ticket
 
 router = APIRouter(tags=["Tickets"])
+
+@router.post("/tickets", response_model=TicketInDB)
+def post_ticket_endpoint(ticket: TicketCreate, db: Session = Depends(get_db)):
+    return post_ticket(db, ticket)
 
 @router.post("/tickets/buy", response_model=UserTicketInDB)
 def buy_ticket_endpoint(ticket: UserTicketCreate, db: Session = Depends(get_db)):

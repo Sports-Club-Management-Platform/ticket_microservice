@@ -25,7 +25,7 @@ app = FastAPI(
     contact={
         "name": "ClubSync",
     },
-    servers=[{"url": "http://localhost:8000", "description": "Local server"}],
+    servers=[{"url": "http://localhost:8001", "description": "Local server"}],
 )
 
 app.add_middleware(

@@ -6,9 +6,24 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from db.database import get_db
-from models.ticket import Ticket as TicketModel, UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB, UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from models.ticket import Ticket as TicketModel
+from models.userticket import UserTicket as UserTicketModel
+from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
+from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
 
+def post_ticket(db: Session, ticket: TicketCreate):
+    """
+    Create a ticket.
+
+    :param db: Database session
+    :param ticket: Ticket to create
+    :return: Ticket created
+    """
+    ticket_db = TicketModel(**ticket.dict())
+    db.add(ticket_db)
+    db.commit()
+    db.refresh(ticket_db)
+    return ticket_db
 
 def buy_ticket(db: Session, ticket: UserTicketCreate):
     """
