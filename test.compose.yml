@@ -1,6 +1,6 @@
 name: api
 services:
-  db:
+  ticket_db:
     image: mysql:8.0
     env_file: .env
     environment:
@@ -32,11 +32,11 @@ services:
     env_file:
       - .env
     environment:
-      - MYSQL_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
+      - MYSQL_URL=mysql+pymysql://${MYSQL_USER}:${MYSQL_PASSWORD}@ticket_db:3306/${MYSQL_DATABASE}
     volumes:
       - .:/api
     depends_on:
-      db:
+      ticket_db:
         condition: service_healthy
 
 volumes:

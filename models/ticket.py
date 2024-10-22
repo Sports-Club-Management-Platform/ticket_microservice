@@ -16,4 +16,4 @@ class Ticket(Base):
     status = Column(Boolean, default=True, nullable=False)
     type = Column(String(50), nullable=False)
     price = Column(Float, nullable=False)
-
+    
