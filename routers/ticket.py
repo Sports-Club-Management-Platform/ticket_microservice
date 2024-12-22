@@ -57,6 +57,19 @@ def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
     )
     return crud.post_ticket(db, ticket, stripe_product.id)
 
+@router.put("/tickets/{ticket_id}", response_model=TicketInDB)
+def update_ticket(ticket_id: int, ticket_update: TicketUpdate, db: Session = Depends(get_db)):
+    ticket = crud.get_ticket_by_id(db, ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail=f"Ticket with id {ticket_id} not found.")
+    logger.info(ticket_update)
+    logger.info(ticket_update.model_dump(exclude_none=True))
+    if len(ticket_update.model_dump(exclude_none=True)) == 0:
+        raise HTTPException(status_code=400, detail=f"The content to update the ticket with is empty.")
+    return crud.update_ticket(db, ticket, ticket_update)
+
+
+
 @router.post("/tickets/buy", response_model=UserTicketInDB)
 def buy_ticket_endpoint(ticket: UserTicketCreate, db: Session = Depends(get_db)):
     return crud.buy_ticket(db, ticket)

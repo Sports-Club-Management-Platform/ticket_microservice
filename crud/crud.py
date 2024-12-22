@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from db.database import get_db
-from models.ticket import Ticket as TicketModel
+from models.ticket import Ticket as TicketModel, Ticket
 from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
@@ -26,6 +26,23 @@ def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str):
     db.commit()
     db.refresh(ticket_db)
     return ticket_db
+
+def update_ticket(db: Session, ticket: Ticket, ticket_update: TicketUpdate):
+    """
+    Create a ticket.
+
+    :param db: Database session
+    :param ticket: Ticket database model
+    :param ticket_update: Ticket data to update
+    :return: Ticket updated
+    """
+    ticket_update_parameters = ticket_update.model_dump(exclude_none=True)
+    for field_name, field_value in ticket_update_parameters.items():
+        setattr(ticket, field_name, field_value)
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
 
 def buy_ticket(db: Session, ticket: UserTicketCreate):
     """
