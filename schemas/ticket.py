@@ -15,10 +15,10 @@ class TicketCreate(Ticket):
     image: UploadFile
 
 class TicketUpdate(BaseModel):
+    # For now ticket update doesn't include price
     name: Optional[str] = None
     description: Optional[str] = None
     active: Optional[bool] = None
-    price: Optional[float] = None
 
 class TicketInDB(Ticket):
     id: int

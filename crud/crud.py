@@ -15,6 +15,7 @@ def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str):
     """
     Create a ticket.
 
+    :param stripe_prod_id: id for the product in stripe
     :param db: Database session
     :param ticket: Ticket to create
     :return: Ticket created

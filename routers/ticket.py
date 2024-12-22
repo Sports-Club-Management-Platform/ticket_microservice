@@ -66,7 +66,14 @@ def update_ticket(ticket_id: int, ticket_update: TicketUpdate, db: Session = Dep
     logger.info(ticket_update.model_dump(exclude_none=True))
     if len(ticket_update.model_dump(exclude_none=True)) == 0:
         raise HTTPException(status_code=400, detail=f"The content to update the ticket with is empty.")
-    return crud.update_ticket(db, ticket, ticket_update)
+    crud.update_ticket(db, ticket, ticket_update)
+    stripe.Product.modify(
+        ticket.stripe_prod_id,
+        name=ticket.name,
+        description=ticket.description,
+        active=ticket.active,
+    )
+    return ticket
 
 
 
