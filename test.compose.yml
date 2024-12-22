@@ -1,4 +1,4 @@
-name: api
+name: tickets_api
 services:
   ticket_db:
     image: mysql:8.0
