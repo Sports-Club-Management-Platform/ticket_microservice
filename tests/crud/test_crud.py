@@ -16,7 +16,7 @@ from models.ticket import Ticket
 from models.userticket import UserTicket
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
-from crud.ticket import (
+from crud.crud import (
     post_ticket,
     buy_ticket,
     get_tickets_by_user_id,
