@@ -54,7 +54,8 @@ def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
         },
         images=[stripe_link.url],
     )
-    return crud.post_ticket(db, ticket, stripe_product.id, stripe_link.url)
+    stripe_price_id = stripe_product["default_price"]
+    return crud.post_ticket(db, ticket, stripe_product.id, stripe_price_id, stripe_link.url)
 
 @router.put("/tickets/{ticket_id}", response_model=TicketInDB)
 def update_ticket(ticket_id: int, ticket_update: TicketUpdate, db: Session = Depends(get_db)):
@@ -89,9 +90,12 @@ def get_ticket_by_id_endpoint(ticket_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Ticket not found")
     return ticket
 
-@router.get("/tickets/game/{game_id}", response_model=List[TicketInDB])
+@router.get("/tickets/game/{game_id}", response_model=TicketInDB)
 def get_tickets_by_game_id_endpoint(game_id: int, db: Session = Depends(get_db)):
-    return crud.get_tickets_by_game_id(db, game_id)
+    ticket = crud.get_ticket_by_game_id(db, game_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail=f"Ticket not found for game ID {game_id}")
+    return ticket
 
 @router.get("/tickets", response_model=List[TicketInDB])
 def get_tickets_endpoint(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

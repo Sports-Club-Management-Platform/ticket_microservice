@@ -22,6 +22,6 @@ class TicketUpdate(BaseModel):
 
 class TicketInDB(Ticket):
     id: int
-    stripe_prod_id: str
+    stripe_price_id: str
     stripe_image_url: str
 

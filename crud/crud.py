@@ -11,17 +11,20 @@ from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
 
-def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_image_url: str):
+def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_price_id: str, stripe_image_url: str):
     """
     Create a ticket.
 
     :param stripe_prod_id: id for the product in stripe
+    :param stripe_price_id id for the corresponding price object in stripe
+    :param stripe_image_url: url for the ticket product image
     :param db: Database session
     :param ticket: Ticket to create
     :return: Ticket created
     """
     ticket_dict = ticket.model_dump(exclude={'image'})
     ticket_dict['stripe_prod_id'] = stripe_prod_id
+    ticket_dict['stripe_price_id'] = stripe_price_id
     ticket_dict['stripe_image_url'] = stripe_image_url
     ticket_db = TicketModel(**ticket_dict)
     db.add(ticket_db)
@@ -81,15 +84,15 @@ def get_ticket_by_id(db: Session, ticket_id: int):
     """
     return db.query(TicketModel).filter(TicketModel.id == ticket_id).first()
 
-def get_tickets_by_game_id(db: Session, game_id: int):
+def get_ticket_by_game_id(db: Session, game_id: int):
     """
-    Get tickets by game ID.
+    Get ticket by game ID.
 
     :param db: Database session
     :param game_id: ID of the game
     :return: List of tickets for the game
     """
-    return db.query(TicketModel).filter(TicketModel.game_id == game_id).all()
+    return db.query(TicketModel).filter(TicketModel.game_id == game_id and TicketModel.active == True).first()
 
 
 ##########################
