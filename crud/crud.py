@@ -11,7 +11,7 @@ from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
 
-def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str):
+def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_image_url: str):
     """
     Create a ticket.
 
@@ -20,9 +20,10 @@ def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str):
     :param ticket: Ticket to create
     :return: Ticket created
     """
-    ticked_dict = ticket.model_dump(exclude={'image'})
-    ticked_dict['stripe_prod_id'] = stripe_prod_id
-    ticket_db = TicketModel(**ticked_dict)
+    ticket_dict = ticket.model_dump(exclude={'image'})
+    ticket_dict['stripe_prod_id'] = stripe_prod_id
+    ticket_dict['stripe_image_url'] = stripe_image_url
+    ticket_db = TicketModel(**ticket_dict)
     db.add(ticket_db)
     db.commit()
     db.refresh(ticket_db)

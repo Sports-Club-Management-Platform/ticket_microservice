@@ -32,7 +32,6 @@ router = APIRouter(tags=["Tickets"])
 @router.post("/tickets", response_model=TicketInDB)
 def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
     _, file_extension = os.path.splitext(ticket.image.filename)
-    logger.info(f"File extension: {file_extension}")
     if file_extension not in ACCEPTED_FILE_EXTENSIONS:
         raise HTTPException(status_code=404, detail=f"File extension not supported. Supported file extensions include {ACCEPTED_FILE_EXTENSIONS[0]}")
     if ticket.image.content_type not in ACCEPTED_FILE_MIME_TYPE:
@@ -55,15 +54,13 @@ def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
         },
         images=[stripe_link.url],
     )
-    return crud.post_ticket(db, ticket, stripe_product.id)
+    return crud.post_ticket(db, ticket, stripe_product.id, stripe_link.url)
 
 @router.put("/tickets/{ticket_id}", response_model=TicketInDB)
 def update_ticket(ticket_id: int, ticket_update: TicketUpdate, db: Session = Depends(get_db)):
     ticket = crud.get_ticket_by_id(db, ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail=f"Ticket with id {ticket_id} not found.")
-    logger.info(ticket_update)
-    logger.info(ticket_update.model_dump(exclude_none=True))
     if len(ticket_update.model_dump(exclude_none=True)) == 0:
         raise HTTPException(status_code=400, detail=f"The content to update the ticket with is empty.")
     crud.update_ticket(db, ticket, ticket_update)
