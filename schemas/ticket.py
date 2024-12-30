@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+
+from fastapi import Form, UploadFile
 from pydantic import BaseModel
 from typing import Optional
 
@@ -5,20 +8,20 @@ class Ticket(BaseModel):
     game_id: int
     name: str
     description: str
-    status: bool # Available to buy
-    type: str
-    price: float
+    active: bool # Available to buy
+    price: float # In euros
 
 class TicketCreate(Ticket):
-    pass
+    image: UploadFile
 
-class TicketUpdate(Ticket):
+class TicketUpdate(BaseModel):
+    # For now ticket update doesn't include price
     name: Optional[str] = None
     description: Optional[str] = None
-    status: Optional[bool] = None
-    type: Optional[str] = None
-    price: Optional[float] = None
+    active: Optional[bool] = None
 
 class TicketInDB(Ticket):
     id: int
+    stripe_price_id: str
+    stripe_image_url: str
 

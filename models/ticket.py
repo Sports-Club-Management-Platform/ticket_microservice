@@ -13,7 +13,9 @@ class Ticket(Base):
     game_id = Column(Integer, nullable=False)
     name = Column(String(200), index=True, nullable=False)
     description = Column(String(500), nullable=True)
-    status = Column(Boolean, default=True, nullable=False)
-    type = Column(String(50), nullable=False)
+    active = Column(Boolean, nullable=False)
     price = Column(Float, nullable=False)
+    stripe_prod_id = Column(String(32), nullable=False)
+    stripe_price_id = Column(String(32), nullable=False)
+    stripe_image_url = Column(String(512), nullable=False)
     
