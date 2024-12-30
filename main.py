@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette import status
 
 from db.create_database import create_tables
 from db.database import SessionLocal
@@ -25,7 +26,7 @@ app = FastAPI(
     contact={
         "name": "ClubSync",
     },
-    servers=[{"url": "http://localhost:8001", "description": "Local server"}],
+    root_path="/tickets/v1",
 )
 
 app.add_middleware(
@@ -35,6 +36,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get(
+    "/health",
+    tags=["healthcheck"],
+    summary="Perform a Health Check",
+    response_description="Return HTTP Status Code 200 (OK)",
+    status_code=status.HTTP_200_OK,
+)
+def get_health():
+    return {"status": "ok"}
+
 
 app.include_router(ticket.router)
 

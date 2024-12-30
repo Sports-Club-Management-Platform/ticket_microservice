@@ -2,7 +2,7 @@ FROM python:3.12-slim AS requirements-stage
 
 ENV PYTHONUNBUFFERED 1
 
-WORKDIR /api
+WORKDIR /ticket_microservice
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc libffi-dev libssl-dev && \
