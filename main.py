@@ -27,7 +27,7 @@ app = FastAPI(
         "name": "ClubSync",
     },
     servers=[{"url": "http://localhost:8001", "description": "Local server"}],
-    root_path="/tickets",
+    root_path="/",
 )
 
 app.add_middleware(
