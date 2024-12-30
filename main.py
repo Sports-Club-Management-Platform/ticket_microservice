@@ -20,14 +20,13 @@ app = FastAPI(
     lifespan=lifespan,
     title="ClubSync Ticket_Microservice API",
     version="0.0.1",
-    docs_url="/tickets/docs",
+    docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
     contact={
         "name": "ClubSync",
     },
-    servers=[{"url": "http://localhost:8001", "description": "Local server"}],
-    root_path="/",
+    root_path="/tickets/v1",
 )
 
 app.add_middleware(
