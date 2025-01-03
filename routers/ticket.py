@@ -1,24 +1,26 @@
 import io
+import json
 import logging
 import os
 import sys
 from locale import currency
-
-import stripe
 from typing import List
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+import aio_pika
+import stripe
+from aio_pika import Message
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException
 
 from crud import crud
 from db.database import get_db
-
 from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
-from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
+from schemas.userticket import (UserTicketCreate, UserTicketInDB,
+                                UserTicketUpdate)
 
+RABBITMQ_URL = os.getenv("RABBITMQ_URL")
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -29,9 +31,21 @@ ACCEPTED_FILE_EXTENSIONS = [".png"]
 
 router = APIRouter(tags=["Tickets"])
 
+async def publish_message(exchange_name: str, routing_key: str, message: dict):
+    connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    channel = await connection.channel()
+    exchange = await channel.declare_exchange(exchange_name, type=aio_pika.ExchangeType.TOPIC, durable=True)
+    queue = await channel.declare_queue(routing_key, durable=True)
+    await queue.bind(exchange, routing_key=routing_key)
+
+    await exchange.publish(
+        Message(body=json.dumps(message).encode()),
+        routing_key=routing_key
+    )
+
 
 @router.post("/tickets", response_model=TicketInDB)
-def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
+async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
     _, file_extension = os.path.splitext(ticket.image.filename)
     if file_extension not in ACCEPTED_FILE_EXTENSIONS:
         raise HTTPException(
@@ -65,13 +79,24 @@ def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
         images=[stripe_link.url],
     )
     stripe_price_id = stripe_product["default_price"]
-    return crud.post_ticket(
+
+    created_ticket = crud.post_ticket(
         db, ticket, stripe_product.id, stripe_price_id, stripe_link.url
     )
 
+    # Publish message to MQ for payment microservice
+    message = {
+        "event": "ticket_created",
+        "ticket_id": created_ticket.id,
+        "stock": ticket.stock
+    }
+    await publish_message("exchange", "TICKETS", message)
+
+    return created_ticket
+
 
 @router.put("/tickets/{ticket_id}", response_model=TicketInDB)
-def update_ticket(
+async def update_ticket(
     ticket_id: int, ticket_update: TicketUpdate, db: Session = Depends(get_db)
 ):
     ticket = crud.get_ticket_by_id(db, ticket_id)
@@ -83,13 +108,25 @@ def update_ticket(
         raise HTTPException(
             status_code=400, detail="The content to update the ticket with is empty."
         )
+    
+    if ticket_update.stock is not None:
+        # Publish message to MQ for payment microservice
+        message = {
+            "event": "ticket_stock_updated",
+            "ticket_id": ticket.id,
+            "stock": ticket_update.stock
+        }
+        await publish_message("exchange", "TICKETS", message)
+
     crud.update_ticket(db, ticket, ticket_update)
+
     stripe.Product.modify(
         ticket.stripe_prod_id,
         name=ticket.name,
         description=ticket.description,
         active=ticket.active,
-    )
+    )        
+
     return ticket
 
 

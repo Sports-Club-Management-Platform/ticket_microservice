@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from fastapi import Form, UploadFile
 from pydantic import BaseModel
-from typing import Optional
+
 
 class Ticket(BaseModel):
     game_id: int
@@ -10,6 +11,7 @@ class Ticket(BaseModel):
     description: str
     active: bool # Available to buy
     price: float # In euros
+    stock: int # Number of tickets available
 
 class TicketCreate(Ticket):
     image: UploadFile
@@ -19,6 +21,7 @@ class TicketUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     active: Optional[bool] = None
+    stock: Optional[int] = None
 
 class TicketInDB(Ticket):
     id: int
