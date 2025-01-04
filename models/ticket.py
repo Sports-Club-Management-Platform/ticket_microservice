@@ -14,7 +14,6 @@ class Ticket(Base):
     name = Column(String(200), index=True, nullable=False)
     description = Column(String(500), nullable=True)
     active = Column(Boolean, nullable=False)
-    stock = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)
     stripe_prod_id = Column(String(32), nullable=False)
     stripe_price_id = Column(String(32), nullable=False)

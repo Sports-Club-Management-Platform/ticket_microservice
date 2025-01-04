@@ -88,6 +88,7 @@ async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get
     message = {
         "event": "ticket_created",
         "ticket_id": created_ticket.id,
+        "stripe_price_id": stripe_price_id,
         "stock": ticket.stock
     }
     await publish_message("exchange", "TICKETS", message)

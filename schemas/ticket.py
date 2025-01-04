@@ -11,10 +11,10 @@ class Ticket(BaseModel):
     description: str
     active: bool # Available to buy
     price: float # In euros
-    stock: int # Number of tickets available
-
 class TicketCreate(Ticket):
     image: UploadFile
+    stock: int # Number of tickets available
+
 
 class TicketUpdate(BaseModel):
     # For now ticket update doesn't include price

@@ -1,15 +1,16 @@
-from fastapi import HTTPException
-
-from fastapi import Depends
-from sqlalchemy.orm import Session
-
 from typing import List
 
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+
 from db.database import get_db
-from models.ticket import Ticket as TicketModel, Ticket
+from models.ticket import Ticket
+from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
-from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
+from schemas.userticket import (UserTicketCreate, UserTicketInDB,
+                                UserTicketUpdate)
+
 
 def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_price_id: str, stripe_image_url: str):
     """
@@ -22,7 +23,7 @@ def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_p
     :param ticket: Ticket to create
     :return: Ticket created
     """
-    ticket_dict = ticket.model_dump(exclude={'image'})
+    ticket_dict = ticket.model_dump(exclude={'image', 'stock'})
     ticket_dict['stripe_prod_id'] = stripe_prod_id
     ticket_dict['stripe_price_id'] = stripe_price_id
     ticket_dict['stripe_image_url'] = stripe_image_url
