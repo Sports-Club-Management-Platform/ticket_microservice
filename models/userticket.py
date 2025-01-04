@@ -15,4 +15,4 @@ class UserTicket(Base):
     quantity = Column(Integer, nullable=False)
     total_price = Column(Float, nullable=False)
     created_at = Column(String(500), nullable=False)
-    updated_at = Column(String(500), nullable=False)
+    updated_at = Column(String(500), nullable=True)

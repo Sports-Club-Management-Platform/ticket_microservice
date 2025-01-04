@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
+
 
 class UserTicket(BaseModel):
     user_id: int
@@ -7,7 +9,7 @@ class UserTicket(BaseModel):
     quantity: int
     total_price: float
     created_at: str
-    updated_at: str
+    updated_at: Optional[str] = None
 
 class UserTicketCreate(UserTicket):
     pass

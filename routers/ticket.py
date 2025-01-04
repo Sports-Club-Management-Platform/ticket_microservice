@@ -1,15 +1,18 @@
+import asyncio
 import io
 import json
 import logging
 import os
 import sys
+from contextlib import asynccontextmanager
 from locale import currency
 from typing import List
 
 import aio_pika
 import stripe
 from aio_pika import Message
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException,
+                     UploadFile)
 from sqlalchemy.orm import Session
 
 from crud import crud
@@ -20,6 +23,8 @@ from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
 from schemas.userticket import (UserTicketCreate, UserTicketInDB,
                                 UserTicketUpdate)
 
+router = APIRouter(tags=["Tickets"])
+
 RABBITMQ_URL = os.getenv("RABBITMQ_URL")
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 logger = logging.getLogger(__name__)
@@ -29,18 +34,48 @@ MAX_FILE_SIZE = 2097152  # 2MB - Stripe maximum
 ACCEPTED_FILE_MIME_TYPE = ["image/png"]
 ACCEPTED_FILE_EXTENSIONS = [".png"]
 
-router = APIRouter(tags=["Tickets"])
-
-async def publish_message(exchange_name: str, routing_key: str, message: dict):
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global connection, channel, exchange, queue
+    # Connect to RabbitMQ
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
-    exchange = await channel.declare_exchange(exchange_name, type=aio_pika.ExchangeType.TOPIC, durable=True)
-    queue = await channel.declare_queue(routing_key, durable=True)
-    await queue.bind(exchange, routing_key=routing_key)
+    exchange = await channel.declare_exchange("exchange", type=aio_pika.ExchangeType.TOPIC, durable=True)
+    queue = await channel.declare_queue("TICKETS", durable=True)
+    await queue.bind(exchange, routing_key="TICKETS")
 
+    async def rabbitmq_listener():
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    print("Received message:", message.body)
+                    # Process the message here
+                    await process_message(message.body)
+    
+    # Run RabbitMQ listener in the background
+    task = asyncio.create_task(rabbitmq_listener())
+    yield
+    # Cleanup
+    await channel.close()
+    await connection.close()
+
+async def process_message(body):
+    message = json.loads(body)
+    event = message.get("event")
+    if event == "checkout.session.completed":
+        ticket = UserTicketCreate(
+            user_id=message["user_id"],
+            ticket_id=message["ticket_id"],
+            quantity=message["quantity"],
+            total_price=message["total_price"],
+            created_at=message["created_at"],
+        )
+        crud.buy_ticket(ticket)
+
+async def send_message(message: dict):
     await exchange.publish(
         Message(body=json.dumps(message).encode()),
-        routing_key=routing_key
+        routing_key="TICKETS"
     )
 
 
@@ -91,7 +126,7 @@ async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get
         "stripe_price_id": stripe_price_id,
         "stock": ticket.stock
     }
-    await publish_message("exchange", "TICKETS", message)
+    await send_message("exchange", "TICKETS", message)
 
     return created_ticket
 
@@ -117,7 +152,7 @@ async def update_ticket(
             "ticket_id": ticket.id,
             "stock": ticket_update.stock
         }
-        await publish_message("exchange", "TICKETS", message)
+        await send_message("exchange", "TICKETS", message)
 
     crud.update_ticket(db, ticket, ticket_update)
 
