@@ -16,3 +16,5 @@ class UserTicket(Base):
     total_price = Column(Float, nullable=False)
     created_at = Column(String(500), nullable=False)
     updated_at = Column(String(500), nullable=False)
+    is_active = Column(Boolean, default=True)
+    deactivated_at = Column(String(500), nullable=True)

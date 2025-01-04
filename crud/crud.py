@@ -1,17 +1,28 @@
 from fastapi import HTTPException
 
-from fastapi import Depends
 from sqlalchemy.orm import Session
-
-from typing import List
 
 from db.database import get_db
 from models.ticket import Ticket as TicketModel, Ticket
 from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
-from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from schemas.userticket import (
+    UserTicketCreate,
+    UserTicketUpdate,
+    UserTicketInDB,
+    UserTicket,
+)
 
-def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_price_id: str, stripe_image_url: str):
+from datetime import datetime
+
+
+def post_ticket(
+    db: Session,
+    ticket: TicketCreate,
+    stripe_prod_id: str,
+    stripe_price_id: str,
+    stripe_image_url: str,
+):
     """
     Create a ticket.
 
@@ -22,15 +33,16 @@ def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_p
     :param ticket: Ticket to create
     :return: Ticket created
     """
-    ticket_dict = ticket.model_dump(exclude={'image'})
-    ticket_dict['stripe_prod_id'] = stripe_prod_id
-    ticket_dict['stripe_price_id'] = stripe_price_id
-    ticket_dict['stripe_image_url'] = stripe_image_url
+    ticket_dict = ticket.model_dump(exclude={"image"})
+    ticket_dict["stripe_prod_id"] = stripe_prod_id
+    ticket_dict["stripe_price_id"] = stripe_price_id
+    ticket_dict["stripe_image_url"] = stripe_image_url
     ticket_db = TicketModel(**ticket_dict)
     db.add(ticket_db)
     db.commit()
     db.refresh(ticket_db)
     return ticket_db
+
 
 def update_ticket(db: Session, ticket: Ticket, ticket_update: TicketUpdate):
     """
@@ -74,6 +86,32 @@ def get_tickets_by_user_id(db: Session, user_id: int):
     """
     return db.query(UserTicketModel).filter(UserTicketModel.user_id == user_id).all()
 
+
+def validate_ticket(db: Session, ticket_id: int) -> UserTicket:
+    """
+    Validate a ticket.
+
+    :param db: Database session
+    :param ticket_update: Ticket to validate
+    :return: Ticket validated
+    """
+    ticket = db.query(UserTicketModel).filter(UserTicketModel.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(
+            status_code=404, detail=f"Ticket with id {ticket_id} not found."
+        )
+    if not ticket.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ticket with id {ticket_id} is already deactivated.",
+        )
+    setattr(ticket, "is_active", False)
+    setattr(ticket, "deactivated_at", str(datetime.now()))
+    db.commit()
+    db.refresh(ticket)
+    return ticket
+
+
 def get_ticket_by_id(db: Session, ticket_id: int):
     """
     Get a ticket by ID.
@@ -84,6 +122,7 @@ def get_ticket_by_id(db: Session, ticket_id: int):
     """
     return db.query(TicketModel).filter(TicketModel.id == ticket_id).first()
 
+
 def get_ticket_by_game_id(db: Session, game_id: int):
     """
     Get ticket by game ID.
@@ -92,7 +131,11 @@ def get_ticket_by_game_id(db: Session, game_id: int):
     :param game_id: ID of the game
     :return: List of tickets for the game
     """
-    return db.query(TicketModel).filter(TicketModel.game_id == game_id and TicketModel.active == True).first()
+    return (
+        db.query(TicketModel)
+        .filter(TicketModel.game_id == game_id and TicketModel.active == True)
+        .first()
+    )
 
 
 ##########################

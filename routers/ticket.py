@@ -17,7 +17,12 @@ from db.database import get_db
 from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
-from schemas.userticket import UserTicketCreate, UserTicketUpdate, UserTicketInDB
+from schemas.userticket import (
+    UserTicketCreate,
+    UserTicketUpdate,
+    UserTicketInDB,
+    UserTicket,
+)
 
 stripe.api_key = os.getenv("STRIPE_API_KEY")
 logger = logging.getLogger(__name__)
@@ -126,3 +131,10 @@ def get_tickets_endpoint(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     return crud.get_tickets(db, skip, limit)
+
+
+@router.put("/tickets/{ticket_id}/validate", response_model=UserTicket)
+def deactivate_ticket(ticket_id: int, db: Session = Depends(get_db)):
+    ticket = crud.validate_ticket(db, ticket_id)
+
+    return ticket
