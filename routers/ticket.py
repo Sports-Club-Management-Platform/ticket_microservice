@@ -11,17 +11,16 @@ from typing import List
 import aio_pika
 import stripe
 from aio_pika import Message
-from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException,
-                     UploadFile)
-from sqlalchemy.orm import Session
-
 from crud import crud
 from db.database import get_db
+from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException,
+                     UploadFile)
 from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
 from schemas.userticket import (UserTicketCreate, UserTicketInDB,
                                 UserTicketUpdate)
+from sqlalchemy.orm import Session
 
 router = APIRouter(tags=["Tickets"])
 
@@ -126,7 +125,7 @@ async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get
         "stripe_price_id": stripe_price_id,
         "stock": ticket.stock
     }
-    await send_message("exchange", "TICKETS", message)
+    await send_message(message)
 
     return created_ticket
 
@@ -152,7 +151,7 @@ async def update_ticket(
             "ticket_id": ticket.id,
             "stock": ticket_update.stock
         }
-        await send_message("exchange", "TICKETS", message)
+        await send_message(message)
 
     crud.update_ticket(db, ticket, ticket_update)
 
