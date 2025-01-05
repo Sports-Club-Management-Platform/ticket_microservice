@@ -12,6 +12,7 @@ import aio_pika
 import stripe
 from aio_pika import Message
 from crud import crud
+from db.create_database import create_tables
 from db.database import get_db
 from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException,
                      UploadFile)
@@ -33,9 +34,15 @@ MAX_FILE_SIZE = 2097152  # 2MB - Stripe maximum
 ACCEPTED_FILE_MIME_TYPE = ["image/png"]
 ACCEPTED_FILE_EXTENSIONS = [".png"]
 
+connection = None
+channel = None
+exchange = None
+queue = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global connection, channel, exchange, queue
+    create_tables()
     # Connect to RabbitMQ
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
@@ -72,6 +79,7 @@ async def process_message(body):
         crud.buy_ticket(ticket)
 
 async def send_message(message: dict):
+    global exchange
     await exchange.publish(
         Message(body=json.dumps(message).encode()),
         routing_key="TICKETS"
@@ -86,7 +94,7 @@ async def create_ticket(game_id: int = Form(...),
     price: float = Form(...),
     stock: int = Form(...),
     image: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
-    ticket = TicketModel(
+    ticket = TicketCreate(
         game_id=game_id,
         name=name,
         description=description,
