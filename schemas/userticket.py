@@ -3,7 +3,6 @@ from typing import Optional
 
 
 class UserTicket(BaseModel):
-    id: int
     user_id: int
     ticket_id: int
     quantity: int
