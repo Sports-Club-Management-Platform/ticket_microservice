@@ -6,7 +6,7 @@ import os
 import sys
 from contextlib import asynccontextmanager
 from locale import currency
-from typing import List
+from typing import List, Optional
 
 import aio_pika
 import stripe
@@ -79,19 +79,19 @@ async def send_message(message: dict):
 
 
 @router.post("/tickets", response_model=TicketInDB)
-async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get_db)):
-    _, file_extension = os.path.splitext(ticket.image.filename)
+async def create_ticket(ticket: TicketCreate = Form(), image: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
+    _, file_extension = os.path.splitext(image.filename)
     if file_extension not in ACCEPTED_FILE_EXTENSIONS:
         raise HTTPException(
             status_code=404,
             detail=f"File extension not supported. Supported file extensions include {ACCEPTED_FILE_EXTENSIONS[0]}",
         )
-    if ticket.image.content_type not in ACCEPTED_FILE_MIME_TYPE:
+    if image.content_type not in ACCEPTED_FILE_MIME_TYPE:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid file MIME type. Supported MIME types include {ACCEPTED_FILE_MIME_TYPE[0]}.",
         )
-    if ticket.image.size > MAX_FILE_SIZE:
+    if image.size > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
             detail=f"File too large. Max size is {MAX_FILE_SIZE} bytes.",
@@ -99,7 +99,7 @@ async def create_ticket(ticket: TicketCreate = Form(), db: Session = Depends(get
 
     stripe_uploaded_image = stripe.File.create(
         purpose="product_image",
-        file=io.BytesIO(ticket.image.file.read()),
+        file=io.BytesIO(image.file.read()),
     )
     stripe_link = stripe.FileLink().create(file=stripe_uploaded_image)
     stripe_product = stripe.Product.create(
