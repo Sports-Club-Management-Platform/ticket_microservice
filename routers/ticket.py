@@ -79,7 +79,21 @@ async def send_message(message: dict):
 
 
 @router.post("/tickets", response_model=TicketInDB)
-async def create_ticket(ticket: TicketCreate = Form(), image: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
+async def create_ticket(game_id: int = Form(...),
+    name: str = Form(...),
+    description: str = Form(...),
+    active: bool = Form(...),
+    price: float = Form(...),
+    stock: int = Form(...),
+    image: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
+    ticket = TicketModel(
+        game_id=game_id,
+        name=name,
+        description=description,
+        active=active,
+        price=price,
+        stock=stock,
+    )
     _, file_extension = os.path.splitext(image.filename)
     if file_extension not in ACCEPTED_FILE_EXTENSIONS:
         raise HTTPException(
