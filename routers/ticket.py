@@ -47,11 +47,17 @@ async def lifespan(app: FastAPI):
     connection = await aio_pika.connect_robust(RABBITMQ_URL)
     channel = await connection.channel()
     exchange = await channel.declare_exchange("exchange", type=aio_pika.ExchangeType.TOPIC, durable=True)
-    queue = await channel.declare_queue("TICKETS", durable=True)
-    await queue.bind(exchange, routing_key="TICKETS")
+
+    # queues
+    tickets_queue = await channel.declare_queue("TICKETS", durable=True)
+    payments_queue = await channel.declare_queue("PAYMENTS", durable=True)
+
+    # bind queues
+    await tickets_queue.bind(exchange, routing_key="tickets.messages")
+    await payments_queue.bind(exchange, routing_key="payments.messages")
 
     async def rabbitmq_listener():
-        async with queue.iterator() as queue_iter:
+        async with payments_queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
                     print("Received message:", message.body)
@@ -68,7 +74,10 @@ async def lifespan(app: FastAPI):
 async def process_message(body):
     message = json.loads(body)
     event = message.get("event")
+    logger.info("ticket microservice received event: %s", event)
+    logger.info(event == "checkout.session.completed")
     if event == "checkout.session.completed":
+        logger.info("Before UserTicketCreate")
         ticket = UserTicketCreate(
             user_id=message["user_id"],
             ticket_id=message["ticket_id"],
@@ -76,24 +85,30 @@ async def process_message(body):
             total_price=message["total_price"],
             created_at=message["created_at"],
         )
-        crud.buy_ticket(ticket)
+        logger.info("buying ticket 2")
+        db = next(get_db())
+        try:
+            crud.buy_ticket(db, ticket)
+            logger.info("bought ticket")
+        finally:
+            db.close()
 
 async def send_message(message: dict):
-    global exchange
     await exchange.publish(
         Message(body=json.dumps(message).encode()),
-        routing_key="TICKETS"
+        routing_key="tickets.messages"
     )
 
 
 @router.post("/tickets", response_model=TicketInDB)
-async def create_ticket(game_id: int = Form(...),
+async def create_ticket(
+    image: UploadFile,
+    game_id: int = Form(...),
     name: str = Form(...),
     description: str = Form(...),
     active: bool = Form(...),
     price: float = Form(...),
-    stock: int = Form(...),
-    image: Optional[UploadFile] = File(None), db: Session = Depends(get_db)):
+    stock: int = Form(...), db: Session = Depends(get_db)):
     ticket = TicketCreate(
         game_id=game_id,
         name=name,
@@ -102,6 +117,11 @@ async def create_ticket(game_id: int = Form(...),
         price=price,
         stock=stock,
     )
+
+    # Verify if there is already a created ticket for that game
+    if crud.get_ticket_by_game_id(db, game_id) is not None:
+        raise HTTPException(status_code=400, detail=f"Ticket already exists for game with id {game_id}")
+
     _, file_extension = os.path.splitext(image.filename)
     if file_extension not in ACCEPTED_FILE_EXTENSIONS:
         raise HTTPException(

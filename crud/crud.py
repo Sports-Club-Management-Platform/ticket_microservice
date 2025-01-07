@@ -8,8 +8,7 @@ from models.ticket import Ticket
 from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
-from schemas.userticket import (UserTicketCreate, UserTicketInDB,
-                                UserTicketUpdate)
+from schemas.userticket import (UserTicketCreate, UserTicketInDB)
 
 
 def post_ticket(db: Session, ticket: TicketCreate, stripe_prod_id: str, stripe_price_id: str, stripe_image_url: str):
@@ -58,7 +57,7 @@ def buy_ticket(db: Session, ticket: UserTicketCreate):
     :param ticket: Ticket to buy
     :return: Ticket bought
     """
-    ticket_db = UserTicketModel(**ticket.dict())
+    ticket_db = UserTicketModel(**ticket.model_dump())
     db.add(ticket_db)
     db.commit()
     db.refresh(ticket_db)
