@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from models.ticket import Ticket
 from models.ticket import Ticket as TicketModel
-from models.userticket import UserTicket as UserTicketModel
+from models.userticket import UserTicket as UserTicketModel, generate_random_user_ticket_id
 
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import (
@@ -76,6 +76,10 @@ def buy_tickets(db: Session, ticket: UserTicketCreate):
     """
     for _ in range(ticket.quantity):
         ticket_db = UserTicketModel(**ticket.model_dump(exclude={'quantity'}))
+        random_ticket_id = generate_random_user_ticket_id(12)
+        while db.query(UserTicketModel).filter(UserTicketModel.id == random_ticket_id).first() is not None:
+            random_ticket_id = generate_random_user_ticket_id(12)
+        ticket_db.id = random_ticket_id
         db.add(ticket_db)
         db.commit()
         db.refresh(ticket_db)
