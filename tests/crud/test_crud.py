@@ -1,13 +1,11 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.exceptions import HTTPException
-from fastapi import UploadFile
-from io import BytesIO
 from sqlalchemy.orm import Session
 from models.ticket import Ticket as TicketModel
 from models.userticket import UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
-from schemas.userticket import UserTicketCreate, UserTicketInDB
+from schemas.ticket import TicketCreate, TicketUpdate
+from schemas.userticket import UserTicketCreate
 from crud.crud import (
     post_ticket,
     buy_tickets,
@@ -15,7 +13,7 @@ from crud.crud import (
     get_ticket_by_id,
     get_ticket_by_game_id,
     get_tickets,
-    validate_ticket,
+    validate_ticket, update_ticket,
 )
 
 
@@ -25,16 +23,13 @@ def test_post_ticket():
     stripe_price_id = "price_123"
     stripe_image_url = "https://example.com/image.jpg"
 
-    # Simulação de UploadFile
-    mock_image = UploadFile(filename="image.jpg", file=BytesIO(b"fake image data"))
-
     ticket_data = TicketCreate(
         game_id=1,
         name="Championship Finals",
         description="Final match of the championship",
         active=True,
         price=150.0,
-        image=mock_image,
+        stock=10
     )
 
     result = post_ticket(
@@ -50,40 +45,173 @@ def test_post_ticket():
     assert result.name == "Championship Finals"
     assert result.active is True
     assert result.price == 150.0
+    # stock is not saved here
     assert result.stripe_prod_id == stripe_prod_id
     assert result.stripe_price_id == stripe_price_id
     assert result.stripe_image_url == stripe_image_url
 
-
-def test_buy_ticket():
+def test_update_ticket():
     mock_db = MagicMock(spec=Session)
+    new_name = "Championship Finals 2"
+    new_description = "Final match of the championship 2"
+    new_active = False
+    new_stock = 0 # irrelevant it is not saved in this microservice
+
+    ticket_db = TicketModel(
+        id=99,
+        game_id=1,
+        name="Championship Finals",
+        description="Final match",
+        active=True,
+        price=150.0,
+        stripe_prod_id="prod_123",
+        stripe_price_id="price_123",
+        stripe_image_url="https://example.com/image.jpg",
+    )
+
+    ticket_update = TicketUpdate(name=new_name, description=new_description, active=new_active, stock=new_stock)
+
+    result = update_ticket(mock_db, ticket_db, ticket_update)
+
+    mock_db.commit.assert_called_once()
+    mock_db.refresh.assert_called_once()
+
+    assert isinstance(result, TicketModel)
+    assert result.game_id == 1
+    assert result.name == new_name
+    assert result.description == new_description
+    assert result.active == new_active
+    assert result.price == 150.0
+    # stock is not saved here
+
+@patch("crud.crud.generate_random_user_ticket_id", return_value='123456789012')
+def test_buy_one_ticket_not_repeated_random_id(generate_random_user_ticket_id_func):
+    mock_db = MagicMock(spec=Session)
+    quantity = 1                                                                    # one ticket
+    mock_db.query.return_value.filter.return_value.first.return_value = None        # not repeated
 
     user_ticket_data = UserTicketCreate(
-        user_id=1,
+        user_id='12b-12b-12b',
         ticket_id=99,
-        quantity=2,
-        total_price=300.0,
+        quantity=quantity,
+        unit_amount=300.0,
         created_at="2023-10-01T12:00:00",
-        updated_at="2023-10-01T12:00:00",
         is_active=True,
         deactivated_at="",
     )
 
-    result = buy_tickets(mock_db, user_ticket_data)
+    buy_tickets(mock_db, user_ticket_data)
 
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
     mock_db.refresh.assert_called_once()
+    generate_random_user_ticket_id_func.assert_called_once_with(12)
+    result = mock_db.add.call_args_list[0][0][0]
 
     assert isinstance(result, UserTicketModel)
-    assert result.user_id == 1
+    assert result.id == '123456789012'
+    assert result.user_id == '12b-12b-12b'
     assert result.ticket_id == 99
-    assert result.quantity == 2
-    assert result.total_price == 300.0
+    assert result.unit_amount == 300.0
     assert result.created_at == "2023-10-01T12:00:00"
-    assert result.updated_at == "2023-10-01T12:00:00"
     assert result.is_active is True
     assert result.deactivated_at == ""
+
+
+@patch("crud.crud.generate_random_user_ticket_id", side_effect=['111111111111', '123456789012'])
+def test_buy_one_ticket_repeated_random_id_at_first(generate_random_user_ticket_id_func):
+    mock_db = MagicMock(spec=Session)
+    quantity = 1                                                                    # one ticket
+    mock_db.query.return_value.filter.return_value.first.side_effect = [
+        UserTicketModel(id='111111111111'), # repeated
+        None                                # not repeated
+    ]
+
+    user_ticket_data = UserTicketCreate(
+        user_id='12b-12b-12b',
+        ticket_id=99,
+        quantity=quantity,
+        unit_amount=300.0,
+        created_at="2023-10-01T12:00:00",
+        is_active=True,
+        deactivated_at="",
+    )
+
+    buy_tickets(mock_db, user_ticket_data)
+
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_called_once()
+    mock_db.refresh.assert_called_once()
+    assert generate_random_user_ticket_id_func.call_count == 2
+    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 12
+
+    result = mock_db.add.call_args_list[0][0][0]
+    assert isinstance(result, UserTicketModel)
+    assert result.id == '123456789012'
+    assert result.user_id == '12b-12b-12b'
+    assert result.ticket_id == 99
+    assert result.unit_amount == 300.0
+    assert result.created_at == "2023-10-01T12:00:00"
+    assert result.is_active is True
+    assert result.deactivated_at == ""
+
+
+@patch("crud.crud.generate_random_user_ticket_id", side_effect=['123456789012', '003456789012', '000056789012'])
+def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket_id_func):
+    mock_db = MagicMock(spec=Session)
+    quantity = 3                                                                    # three ticket
+    mock_db.query.return_value.filter.return_value.first.return_value = None        # not repeated
+
+    user_ticket_data = UserTicketCreate(
+        user_id='12b-12b-12b',
+        ticket_id=99,
+        quantity=quantity,
+        unit_amount=300.0,
+        created_at="2023-10-01T12:00:00",
+        is_active=True,
+        deactivated_at="",
+    )
+
+    buy_tickets(mock_db, user_ticket_data)
+
+    assert mock_db.add.call_count == 3
+    assert mock_db.commit.call_count == 3
+    assert mock_db.refresh.call_count == 3
+    assert generate_random_user_ticket_id_func.call_count == 3
+    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[2][0][0] == 12
+
+    result_1 = mock_db.add.call_args_list[0][0][0]
+    assert isinstance(result_1, UserTicketModel)
+    assert result_1.id == '123456789012'
+    assert result_1.user_id == '12b-12b-12b'
+    assert result_1.ticket_id == 99
+    assert result_1.unit_amount == 300.0
+    assert result_1.created_at == "2023-10-01T12:00:00"
+    assert result_1.is_active is True
+    assert result_1.deactivated_at == ""
+
+    result_2 = mock_db.add.call_args_list[1][0][0]
+    assert isinstance(result_2, UserTicketModel)
+    assert result_2.id == '003456789012'
+    assert result_2.user_id == '12b-12b-12b'
+    assert result_2.ticket_id == 99
+    assert result_2.unit_amount == 300.0
+    assert result_2.created_at == "2023-10-01T12:00:00"
+    assert result_2.is_active is True
+    assert result_2.deactivated_at == ""
+
+    result_3 = mock_db.add.call_args_list[2][0][0]
+    assert isinstance(result_3, UserTicketModel)
+    assert result_3.id == '000056789012'
+    assert result_3.user_id == '12b-12b-12b'
+    assert result_3.ticket_id == 99
+    assert result_3.unit_amount == 300.0
+    assert result_3.created_at == "2023-10-01T12:00:00"
+    assert result_3.is_active is True
+    assert result_3.deactivated_at == ""
 
 
 def test_get_tickets_by_user_id():
@@ -91,22 +219,18 @@ def test_get_tickets_by_user_id():
 
     mock_db.query().filter().all.return_value = [
         UserTicketModel(
-            id=1,
-            user_id=1,
+            id='123456789012',
+            user_id='12b-12b-12b',
             ticket_id=99,
-            quantity=2,
-            total_price=300.0,
+            unit_amount=300.0,
             created_at="2023-10-01T12:00:00",
-            updated_at="2023-10-01T12:00:00",
         ),
         UserTicketModel(
-            id=2,
-            user_id=1,
+            id='003456789012',
+            user_id='12b-12b-12b',
             ticket_id=100,
-            quantity=1,
-            total_price=150.0,
+            unit_amount=150.0,
             created_at="2023-10-02T12:00:00",
-            updated_at="2023-10-02T12:00:00",
         ),
     ]
 
@@ -115,8 +239,8 @@ def test_get_tickets_by_user_id():
     assert isinstance(result, list)
     assert len(result) == 2
     assert all(isinstance(ticket, UserTicketModel) for ticket in result)
-    assert result[0].user_id == 1
-    assert result[1].user_id == 1
+    assert result[0].user_id == '12b-12b-12b'
+    assert result[1].user_id == '12b-12b-12b'
 
 
 def test_get_ticket_by_id():
@@ -206,13 +330,11 @@ def test_validate_ticket_success():
     mock_db = MagicMock(spec=Session)
 
     mock_ticket = UserTicketModel(
-        id=1,
-        user_id=1,
+        id='123456789012',
+        user_id='12b-12b-12b',
         ticket_id=99,
-        quantity=2,
-        total_price=300.0,
+        unit_amount=300.0,
         created_at="2023-10-01T12:00:00",
-        updated_at="2023-10-01T12:00:00",
         is_active=True,
         deactivated_at=None,
     )
@@ -247,13 +369,11 @@ def test_validate_ticket_already_deactivated():
     mock_db = MagicMock(spec=Session)
 
     mock_ticket = UserTicketModel(
-        id=2,
-        user_id=1,
+        id='123456789012',
+        user_id='12b-12b-12b',
         ticket_id=100,
-        quantity=1,
-        total_price=150.0,
+        unit_amount=150.0,
         created_at="2023-10-02T12:00:00",
-        updated_at="2023-10-02T12:00:00",
         is_active=False,
         deactivated_at="2023-10-05T12:00:00",
     )

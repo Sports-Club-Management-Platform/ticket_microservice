@@ -13,7 +13,6 @@ class Ticket(BaseModel):
     price: float # In euros
 
 class TicketCreate(Ticket):
-    # image: UploadFile
     stock: int # Number of tickets available
 
 

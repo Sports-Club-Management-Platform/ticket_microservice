@@ -38,7 +38,7 @@ def post_ticket(
     :param ticket: Ticket to create
     :return: Ticket created
     """
-    ticket_dict = ticket.model_dump(exclude={'image', 'stock'})
+    ticket_dict = ticket.model_dump(exclude={'stock'})
     ticket_dict['stripe_prod_id'] = stripe_prod_id
     ticket_dict['stripe_price_id'] = stripe_price_id
     ticket_dict['stripe_image_url'] = stripe_image_url
