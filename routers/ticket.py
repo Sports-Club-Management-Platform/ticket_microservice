@@ -74,26 +74,23 @@ async def lifespan(app: FastAPI):
 async def process_message(body):
     message = json.loads(body)
     event = message.get("event")
-    logger.info("ticket microservice received event: %s", event)
-    logger.info(event == "checkout.session.completed")
     if event == "checkout.session.completed":
-        logger.info("Before UserTicketCreate")
         ticket = UserTicketCreate(
             user_id=message["user_id"],
             ticket_id=message["ticket_id"],
             quantity=message["quantity"],
-            total_price=message["total_price"],
+            amount_subtotal=message["amount_subtotal"],
             created_at=message["created_at"],
         )
-        logger.info("buying ticket 2")
         db = next(get_db())
         try:
             crud.buy_ticket(db, ticket)
-            logger.info("bought ticket")
+            logger.info(f"Ticket bought: {ticket}")
         finally:
             db.close()
 
 async def send_message(message: dict):
+    logger.info(f"Sending message: {message} to tickets.messages")
     await exchange.publish(
         Message(body=json.dumps(message).encode()),
         routing_key="tickets.messages"

@@ -7,7 +7,7 @@ class UserTicket(BaseModel):
     user_id: str
     ticket_id: int
     quantity: int
-    total_price: float
+    amount_subtotal: float
     created_at: float
     updated_at: Optional[str] = None
 
