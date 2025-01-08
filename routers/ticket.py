@@ -91,7 +91,7 @@ async def process_message(body):
 async def send_message(message: dict):
     logger.info(f"Sending message: {message} to tickets.messages")
     await exchange.publish(
-        Message(body=json.dumps(message).encode()),
+        message=Message(body=json.dumps(message).encode()),
         routing_key="tickets.messages"
     )
 
