@@ -79,13 +79,12 @@ async def process_message(body):
             user_id=message["user_id"],
             ticket_id=message["ticket_id"],
             quantity=message["quantity"],
-            amount_subtotal=message["amount_subtotal"],
+            unit_amount=message["unit_amount"],
             created_at=message["created_at"],
         )
         db = next(get_db())
         try:
-            crud.buy_ticket(db, ticket)
-            logger.info(f"Ticket bought: {ticket}")
+            crud.buy_tickets(db, ticket)
         finally:
             db.close()
 
@@ -206,7 +205,7 @@ async def update_ticket(
 
 @router.post("/tickets/buy", response_model=UserTicketInDB)
 def buy_ticket_endpoint(ticket: UserTicketCreate, db: Session = Depends(get_db)):
-    return crud.buy_ticket(db, ticket)
+    return crud.buy_tickets(db, ticket)
 
 
 @router.get("/tickets/user/{user_id}", response_model=List[UserTicketInDB])

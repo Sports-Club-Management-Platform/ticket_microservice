@@ -1,3 +1,6 @@
+import logging
+import sys
+
 from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
@@ -9,13 +12,14 @@ from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import (
     UserTicketCreate,
-    UserTicketUpdate,
-    UserTicketInDB,
     UserTicket,
 )
 
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 def post_ticket(
     db: Session,
@@ -62,19 +66,20 @@ def update_ticket(db: Session, ticket: Ticket, ticket_update: TicketUpdate):
     return ticket
 
 
-def buy_ticket(db: Session, ticket: UserTicketCreate):
+def buy_tickets(db: Session, ticket: UserTicketCreate):
     """
-    Buy a ticket.
+    Buy various ticket and assign them different generated ids.
 
     :param db: Database session
     :param ticket: Ticket to buy
     :return: Ticket bought
     """
-    ticket_db = UserTicketModel(**ticket.model_dump())
-    db.add(ticket_db)
-    db.commit()
-    db.refresh(ticket_db)
-    return ticket_db
+    for _ in range(ticket.quantity):
+        ticket_db = UserTicketModel(**ticket.model_dump(exclude={'quantity'}))
+        db.add(ticket_db)
+        db.commit()
+        db.refresh(ticket_db)
+        logger.info(f"Ticket bought: {ticket_db.__dict__}")
 
 
 def get_tickets_by_user_id(db: Session, user_id: int):

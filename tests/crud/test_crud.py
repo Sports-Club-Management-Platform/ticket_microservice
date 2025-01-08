@@ -10,7 +10,7 @@ from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketInDB
 from crud.crud import (
     post_ticket,
-    buy_ticket,
+    buy_tickets,
     get_tickets_by_user_id,
     get_ticket_by_id,
     get_ticket_by_game_id,
@@ -69,7 +69,7 @@ def test_buy_ticket():
         deactivated_at="",
     )
 
-    result = buy_ticket(mock_db, user_ticket_data)
+    result = buy_tickets(mock_db, user_ticket_data)
 
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
