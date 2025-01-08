@@ -1,12 +1,15 @@
 import io
 import pytest
 from fastapi import UploadFile
+from datetime import datetime
+from fastapi.exceptions import HTTPException
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from db.database import get_db
 from main import app
 from models.ticket import Ticket as TicketModel
+from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketInDB
 
@@ -209,3 +212,72 @@ def test_get_tickets_no_results(mock_get_tickets, mock_db):
     response = client.get("/tickets")
     assert response.status_code == 200
     assert response.json() == []
+
+
+@patch("routers.ticket.crud.validate_ticket")
+def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
+    """Teste para desativar um ticket com sucesso."""
+
+    mock_ticket = UserTicketInDB(  # Agora usamos um schema Pydantic para garantir o formato correto
+        id=1,
+        user_id=1,
+        ticket_id=99,
+        quantity=2,
+        total_price=300.0,
+        created_at="2023-10-01T12:00:00",
+        updated_at="2023-10-01T12:00:00",
+        is_active=False,
+        deactivated_at=str(datetime.now()),
+    )
+
+    mock_validate_ticket.return_value = mock_ticket
+
+    response = client.put("/tickets/1/validate")
+
+    assert response.status_code == 200
+
+    response_data = response.json()
+
+    # Adicionamos um print para debug (caso necessário)
+    print("Response JSON:", response_data)
+
+    # Agora verificamos se as chaves existem antes de acessá-las
+    assert "is_active" in response_data
+    assert "deactivated_at" in response_data
+
+    assert response_data["is_active"] is False
+    assert response_data["deactivated_at"] is not None
+
+    mock_validate_ticket.assert_called_once_with(mock_db, 1)
+
+
+@patch(
+    "routers.ticket.crud.validate_ticket",
+    side_effect=HTTPException(status_code=404, detail="Ticket with id 99 not found."),
+)
+def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
+    """Teste para tentar desativar um ticket inexistente."""
+
+    response = client.put("/tickets/99/validate")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Ticket with id 99 not found."}
+
+    mock_validate_ticket.assert_called_once_with(mock_db, 99)
+
+
+@patch(
+    "routers.ticket.crud.validate_ticket",
+    side_effect=HTTPException(
+        status_code=400, detail="Ticket with id 2 is already deactivated."
+    ),
+)
+def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
+    """Teste para tentar desativar um ticket já desativado."""
+
+    response = client.put("/tickets/2/validate")
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Ticket with id 2 is already deactivated."}
+
+    mock_validate_ticket.assert_called_once_with(mock_db, 2)

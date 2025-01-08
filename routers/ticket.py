@@ -5,8 +5,7 @@ import logging
 import os
 import sys
 from contextlib import asynccontextmanager
-from locale import currency
-from typing import List, Optional
+from typing import List
 
 import aio_pika
 import stripe
@@ -14,14 +13,15 @@ from aio_pika import Message
 from crud import crud
 from db.create_database import create_tables
 from db.database import get_db
-from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException,
+from fastapi import (APIRouter, Depends, FastAPI, Form, HTTPException,
                      UploadFile)
-from models.ticket import Ticket as TicketModel
-from models.userticket import UserTicket as UserTicketModel
-from schemas.ticket import TicketCreate, TicketInDB, TicketUpdate
-from schemas.userticket import (UserTicketCreate, UserTicketInDB,
-                                UserTicketUpdate)
 from sqlalchemy.orm import Session
+from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
+from schemas.userticket import (
+    UserTicketCreate,
+    UserTicketInDB,
+    UserTicket,
+)
 
 router = APIRouter(tags=["Tickets"])
 
@@ -237,3 +237,10 @@ def get_tickets_endpoint(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     return crud.get_tickets(db, skip, limit)
+
+
+@router.put("/tickets/{ticket_id}/validate", response_model=UserTicket)
+def deactivate_ticket(ticket_id: int, db: Session = Depends(get_db)):
+    ticket = crud.validate_ticket(db, ticket_id)
+
+    return ticket

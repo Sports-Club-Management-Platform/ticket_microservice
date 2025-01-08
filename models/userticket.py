@@ -20,6 +20,8 @@ class UserTicket(Base):
     amount_subtotal = Column(Float, nullable=False)
     created_at = Column(Float, nullable=False)
     updated_at = Column(String(500), nullable=True, onupdate=datetime.now)
+    is_active = Column(Boolean, default=True)
+    deactivated_at = Column(String(500), nullable=True)
 
 def generate_random_user_ticket_id(id_length: int) -> str:
     secure_chars = string.ascii_letters + string.digits + string.punctuation
