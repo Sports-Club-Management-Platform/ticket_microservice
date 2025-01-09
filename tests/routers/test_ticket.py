@@ -511,3 +511,4 @@ def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
     assert response.json() == {"detail": "Ticket with id 2 is already deactivated."}
 
     mock_validate_ticket.assert_called_once_with(mock_db, '2')
+
