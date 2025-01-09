@@ -1,20 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from starlette import status
-
 from db.create_database import create_tables
 from db.database import SessionLocal
-
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from routers import ticket
-
-
-@asynccontextmanager
-async def lifespan(app):
-    create_tables()
-    yield
-
+from routers.ticket import lifespan
+from starlette import status
 
 app = FastAPI(
     lifespan=lifespan,

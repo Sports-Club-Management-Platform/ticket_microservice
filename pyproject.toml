@@ -1,9 +1,19 @@
 [tool.poetry]
-name = "api"
+name = "ticket_microservice"
 version = "0.1.0"
 description = ""
 authors = ["AlexandreCotorobai <alexandrecotorobai@gmail.com>"]
 readme = "README.md"
+
+packages = [
+    { include = "crud" },
+    { include = "auth" },
+    { include = "db" },
+    { include = "models" },
+    { include = "schemas" },
+    { include = "routers" },
+    { include = "tests" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.10.12"
@@ -22,6 +32,7 @@ tox = "^4.21.2"
 testcontainers = "^4.8.1"
 stripe = "^11.4.1"
 python-multipart = "^0.0.20"
+aio-pika = "^9.5.4"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.2"

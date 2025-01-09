@@ -1,7 +1,7 @@
-from typing import Optional
-from typing import List
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy import String, Integer, Boolean, Float, ARRAY, Text
+from typing import List, Optional
+
+from sqlalchemy import (ARRAY, Boolean, Column, DateTime, Float, Integer,
+                        String, Text)
 
 from db.database import Base
 

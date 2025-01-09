@@ -1,24 +1,20 @@
-from pydantic import BaseModel
 from typing import Optional
 
+from pydantic import BaseModel
+
+
 class UserTicket(BaseModel):
-    user_id: int
+    user_id: str
     ticket_id: int
-    quantity: int
-    total_price: float
+    unit_amount: float
     created_at: str
-    updated_at: str
+    is_active: bool = True
+    deactivated_at: Optional[str] = None
+
 
 class UserTicketCreate(UserTicket):
+    quantity: int
     pass
 
-class UserTicketUpdate(UserTicket):
-    user_id: Optional[int] = None
-    ticket_id: Optional[int] = None
-    quantity: Optional[int] = None
-    total_price: Optional[float] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
-
 class UserTicketInDB(UserTicket):
-    id: int
+    id: str
