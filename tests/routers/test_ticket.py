@@ -105,7 +105,7 @@ def test_post_ticket_for_game_with_ticket(
         assert mock_product.call_count == 0
         assert mock_post_ticket.call_count == 0
         assert mock_file_link.call_count == 0
-        get_ticket_by_game_id_func.assert_called_once_with(101)
+        assert get_ticket_by_game_id_func.call_args[0] == (mock_db, 101)
 
 
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)  # Mock to simulate no existing ticket
@@ -185,12 +185,12 @@ def test_post_ticket_for_game_with_no_ticket(
             "stripe_price_id": "price_123",
             "stock": 10
         }).encode()
-        get_ticket_by_game_id_func.assert_called_once_with(101)
+        assert get_ticket_by_game_id_func.call_args[0] == (mock_db, 101)
 
 
 # Teste para extensão de arquivo inválida
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
-def test_create_ticket_invalid_extension(get_ticket_by_game_id_func):
+def test_create_ticket_invalid_extension(get_ticket_by_game_id_func, mock_db):
     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
         jwt_token="token",
         header={"kid": "some_kid"},
@@ -214,7 +214,7 @@ def test_create_ticket_invalid_extension(get_ticket_by_game_id_func):
 
     response = client.post("/tickets", data=payload, files=files, headers=headers)
 
-    get_ticket_by_game_id_func.assert_called_once_with(101)
+    assert get_ticket_by_game_id_func.call_args[0] == (mock_db, 101)
     assert response.status_code == 404
     assert response.json() == {
         "detail": "File extension not supported. Supported file extensions include .png"
@@ -223,7 +223,7 @@ def test_create_ticket_invalid_extension(get_ticket_by_game_id_func):
 
 # Teste para tipo MIME inválido
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
-def test_create_ticket_invalid_mime_type(get_ticket_by_game_id_func):
+def test_create_ticket_invalid_mime_type(get_ticket_by_game_id_func, mock_db):
     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
         jwt_token="token",
         header={"kid": "some_kid"},
@@ -243,9 +243,9 @@ def test_create_ticket_invalid_mime_type(get_ticket_by_game_id_func):
     }
     files = {"image": ("image.png", b"fake_image_data", "image/jpeg")}  # MIME inválido
 
-    response = client.post("/tickets", data=payload, files=files, headers=headers)  
+    response = client.post("/tickets", data=payload, files=files, headers=headers)
 
-    get_ticket_by_game_id_func.assert_called_once_with(101)
+    assert get_ticket_by_game_id_func.call_args[0] == (mock_db, 101)
     assert response.status_code == 400
     assert response.json() == {
         "detail": "Invalid file MIME type. Supported MIME types include image/png."
@@ -255,7 +255,7 @@ def test_create_ticket_invalid_mime_type(get_ticket_by_game_id_func):
 
 # Teste para tamanho de arquivo excedido
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
-def test_create_ticket_file_too_large(get_ticket_by_game_id_func):
+def test_create_ticket_file_too_large(get_ticket_by_game_id_func, mock_db):
     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
         jwt_token="token",
         header={"kid": "some_kid"},
@@ -279,7 +279,7 @@ def test_create_ticket_file_too_large(get_ticket_by_game_id_func):
 
     response = client.post("/tickets", data=payload, files=files, headers=headers)
 
-    get_ticket_by_game_id_func.assert_called_once_with(101)
+    assert get_ticket_by_game_id_func.call_args[0] == (mock_db, 101)
     assert response.status_code == 400
     assert response.json() == {"detail": "File too large. Max size is 2097152 bytes."}
 
