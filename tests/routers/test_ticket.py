@@ -338,7 +338,7 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
     """Teste para desativar um ticket com sucesso."""
 
     mock_ticket = UserTicketInDB(  # Agora usamos um schema Pydantic para garantir o formato correto
-        id=1,
+        id='1',
         user_id='12b-12b-12b',
         ticket_id=99,
         quantity=2,
