@@ -100,12 +100,12 @@ def get_tickets_by_user_id(db: Session, user_id: int):
     return db.query(UserTicketModel).filter(UserTicketModel.user_id == user_id).all()
 
 
-def validate_ticket(db: Session, ticket_id: int) -> UserTicket:
+def validate_ticket(db: Session, ticket_id: str) -> UserTicket:
     """
     Validate a ticket.
 
+    :param ticket_id: ticket_id of ticket to validate
     :param db: Database session
-    :param ticket_update: Ticket to validate
     :return: Ticket validated
     """
     ticket = db.query(UserTicketModel).filter(UserTicketModel.id == ticket_id).first()

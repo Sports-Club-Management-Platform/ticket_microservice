@@ -341,7 +341,6 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
         id='1',
         user_id='12b-12b-12b',
         ticket_id=99,
-        quantity=2,
         unit_amount=300.0,
         created_at="2023-10-01T12:00:00",
         is_active=False,
@@ -366,7 +365,7 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
     assert response_data["is_active"] is False
     assert response_data["deactivated_at"] is not None
 
-    mock_validate_ticket.assert_called_once_with(mock_db, 1)
+    mock_validate_ticket.assert_called_once_with(mock_db, '1')
 
 
 @patch(
@@ -381,7 +380,7 @@ def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket with id 99 not found."}
 
-    mock_validate_ticket.assert_called_once_with(mock_db, 99)
+    mock_validate_ticket.assert_called_once_with(mock_db, '99')
 
 
 @patch(
@@ -398,4 +397,4 @@ def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket with id 2 is already deactivated."}
 
-    mock_validate_ticket.assert_called_once_with(mock_db, 2)
+    mock_validate_ticket.assert_called_once_with(mock_db, '2')

@@ -6,7 +6,6 @@ from pydantic import BaseModel
 class UserTicket(BaseModel):
     user_id: str
     ticket_id: int
-    quantity: int
     unit_amount: float
     created_at: str
     is_active: bool = True
@@ -14,6 +13,7 @@ class UserTicket(BaseModel):
 
 
 class UserTicketCreate(UserTicket):
+    quantity: int
     pass
 
 class UserTicketInDB(UserTicket):

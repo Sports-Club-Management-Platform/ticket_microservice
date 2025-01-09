@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
@@ -22,6 +22,9 @@ from crud.crud import (
 # Mock asynchronous callback function
 async def mock_send_message_callback(db, user_ticket_db):
     pass  # Simulates a no-op async function
+
+# Mock asynchronous callback function with a MagicMock to track calls
+mock_send_message_callback2 = AsyncMock()
 
 
 def test_post_ticket():
@@ -185,7 +188,7 @@ def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket
     )
 
     asyncio.run(
-        buy_tickets(mock_db, user_ticket_data, mock_send_message_callback)
+        buy_tickets(mock_db, user_ticket_data, mock_send_message_callback2)
     )
 
     assert mock_db.add.call_count == 3
@@ -205,6 +208,9 @@ def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket
     assert result_1.created_at == "2023-10-01T12:00:00"
     assert result_1.is_active is True
     assert result_1.deactivated_at == ""
+    actual_db, actual_user_ticket = mock_send_message_callback2.call_args_list[0][0]
+    assert mock_db == actual_db
+    assert result_1 == actual_user_ticket
 
     result_2 = mock_db.add.call_args_list[1][0][0]
     assert isinstance(result_2, UserTicketModel)
@@ -215,6 +221,9 @@ def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket
     assert result_2.created_at == "2023-10-01T12:00:00"
     assert result_2.is_active is True
     assert result_2.deactivated_at == ""
+    actual_db, actual_user_ticket = mock_send_message_callback2.call_args_list[1][0]
+    assert mock_db == actual_db
+    assert result_2 == actual_user_ticket
 
     result_3 = mock_db.add.call_args_list[2][0][0]
     assert isinstance(result_3, UserTicketModel)
@@ -225,6 +234,9 @@ def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket
     assert result_3.created_at == "2023-10-01T12:00:00"
     assert result_3.is_active is True
     assert result_3.deactivated_at == ""
+    actual_db, actual_user_ticket = mock_send_message_callback2.call_args_list[2][0]
+    assert mock_db == actual_db
+    assert result_3 == actual_user_ticket
 
 
 def test_get_tickets_by_user_id():
@@ -354,7 +366,7 @@ def test_validate_ticket_success():
 
     mock_db.query().filter().first.return_value = mock_ticket
 
-    result = validate_ticket(mock_db, ticket_id=1)
+    result = validate_ticket(mock_db, ticket_id='1')
 
     mock_db.commit.assert_called_once()
     mock_db.refresh.assert_called_once_with(mock_ticket)
@@ -371,7 +383,7 @@ def test_validate_ticket_not_found():
     mock_db.query().filter().first.return_value = None
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_ticket(mock_db, ticket_id=99)
+        validate_ticket(mock_db, ticket_id='99')
 
     assert exc_info.value.status_code == 404
     assert "Ticket with id 99 not found." in exc_info.value.detail
@@ -394,7 +406,7 @@ def test_validate_ticket_already_deactivated():
     mock_db.query().filter().first.return_value = mock_ticket
 
     with pytest.raises(HTTPException) as exc_info:
-        validate_ticket(mock_db, ticket_id=2)
+        validate_ticket(mock_db, ticket_id='2')
 
     assert exc_info.value.status_code == 400
     assert "Ticket with id 2 is already deactivated." in exc_info.value.detail
