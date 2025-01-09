@@ -15,9 +15,11 @@ from schemas.userticket import UserTicketCreate, UserTicketInDB
 
 from routers.ticket import auth
 from auth.JWTBearer import JWTAuthorizationCredentials
+from dotenv import load_dotenv
 
 client = TestClient(app)
 
+load_dotenv()
 
 @pytest.fixture(scope="module")
 def mock_db():
@@ -30,17 +32,6 @@ def mock_db():
 def reset_mock_db(mock_db):
     mock_db.reset_mock()
 
-# @pytest.fixture(autouse=True)
-# def override_auth():
-#     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
-#         jwt_token="token",
-#         header={"kid": "some_kid"},
-#         claims={"sub": "user_id"},
-#         signature="signature",
-#         message="message",
-#     )
-#     yield
-#     app.dependency_overrides.pop(auth, None)  
 
 @patch(
     "routers.ticket.crud.post_ticket",
