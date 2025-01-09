@@ -13,6 +13,9 @@ from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import UserTicketCreate, UserTicketInDB
 
+from routers.ticket import auth
+from auth.JWTBearer import JWTAuthorizationCredentials
+
 client = TestClient(app)
 
 
@@ -27,6 +30,17 @@ def mock_db():
 def reset_mock_db(mock_db):
     mock_db.reset_mock()
 
+@pytest.fixture(autouse=True)
+def override_auth():
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
+    yield
+    app.dependency_overrides.pop(auth, None)  
 
 @patch(
     "routers.ticket.crud.post_ticket",
@@ -51,9 +65,13 @@ def reset_mock_db(mock_db):
     "routers.ticket.stripe.FileLink.create",
     return_value={"url": "https://example.com/image.jpg"},
 )
+
+
 def test_post_ticket(
     mock_file_link, mock_file, mock_product, mock_post_ticket, mock_db
 ):
+    headers = {"Authorization": "Bearer token"}
+
     payload = {
         "game_id": 101,
         "name": "Championship Finals",
@@ -63,7 +81,7 @@ def test_post_ticket(
     }
     files = {"image": ("image.png", io.BytesIO(b"fake_image_data"), "image/png")}
 
-    response = client.post("/tickets", data=payload, files=files)
+    response = client.post("/tickets", data=payload, files=files, headers=headers)
 
     assert response.status_code == 200
     mock_file.assert_called_once()
@@ -73,6 +91,9 @@ def test_post_ticket(
 
 # Teste para extensão de arquivo inválida
 def test_create_ticket_invalid_extension():
+
+    headers = {"Authorization": "Bearer token"}
+
     payload = {
         "game_id": "101",
         "name": "Championship Finals",
@@ -84,7 +105,7 @@ def test_create_ticket_invalid_extension():
         "image": ("image.txt", b"fake_image_data", "image/png")
     }  # Extensão inválida
 
-    response = client.post("/tickets", data=payload, files=files)
+    response = client.post("/tickets", data=payload, files=files, headers=headers)
 
     assert response.status_code == 404
     assert response.json() == {
@@ -94,6 +115,8 @@ def test_create_ticket_invalid_extension():
 
 # Teste para tipo MIME inválido
 def test_create_ticket_invalid_mime_type():
+    headers = {"Authorization": "Bearer token"}
+
     payload = {
         "game_id": "101",
         "name": "Championship Finals",
@@ -103,7 +126,7 @@ def test_create_ticket_invalid_mime_type():
     }
     files = {"image": ("image.png", b"fake_image_data", "image/jpeg")}  # MIME inválido
 
-    response = client.post("/tickets", data=payload, files=files)
+    response = client.post("/tickets", data=payload, files=files, headers=headers)  
 
     assert response.status_code == 400
     assert response.json() == {
@@ -113,6 +136,8 @@ def test_create_ticket_invalid_mime_type():
 
 # Teste para tamanho de arquivo excedido
 def test_create_ticket_file_too_large():
+    headers = {"Authorization": "Bearer token"}
+
     payload = {
         "game_id": "101",
         "name": "Championship Finals",
@@ -124,7 +149,7 @@ def test_create_ticket_file_too_large():
     large_file = b"0" * (2097153)  # 2MB + 1 byte
     files = {"image": ("image.png", large_file, "image/png")}
 
-    response = client.post("/tickets", data=payload, files=files)
+    response = client.post("/tickets", data=payload, files=files, headers=headers)
 
     assert response.status_code == 400
     assert response.json() == {"detail": "File too large. Max size is 2097152 bytes."}
@@ -146,6 +171,8 @@ def test_create_ticket_file_too_large():
 @patch("routers.ticket.crud.update_ticket", return_value=None)
 @patch("routers.ticket.stripe.Product.modify")
 def test_update_ticket(mock_modify, mock_update_ticket, mock_get_ticket_by_id, mock_db):
+    headers = {"Authorization": "Bearer token"}
+
     payload = {"name": "New Name", "description": "Updated description"}
     ticket_id = 1
 
@@ -154,7 +181,7 @@ def test_update_ticket(mock_modify, mock_update_ticket, mock_get_ticket_by_id, m
     mock_ticket.name = "New Name"
     mock_ticket.description = "Updated description"
 
-    response = client.put(f"/tickets/{ticket_id}", json=payload)
+    response = client.put(f"/tickets/{ticket_id}", json=payload, headers=headers)
 
     # Verifique o código de status e o conteúdo da resposta
     assert response.status_code == 200
@@ -180,10 +207,12 @@ def test_update_ticket(mock_modify, mock_update_ticket, mock_get_ticket_by_id, m
 # Teste para erro em atualização de ticket
 @patch("routers.ticket.crud.get_ticket_by_id", return_value=None)
 def test_update_ticket_not_found(mock_get_ticket_by_id, mock_db):
+    headers = {"Authorization": "Bearer token"}
+
     payload = {"name": "New Name"}
     ticket_id = 999
 
-    response = client.put(f"/tickets/{ticket_id}", json=payload)
+    response = client.put(f"/tickets/{ticket_id}", json=payload, headers=headers)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket with id 999 not found."}
@@ -193,23 +222,29 @@ def test_update_ticket_not_found(mock_get_ticket_by_id, mock_db):
 # Testes para outras rotas
 @patch("routers.ticket.crud.get_ticket_by_id", return_value=None)
 def test_get_ticket_by_id_not_found(mock_get_ticket_by_id, mock_db):
+    headers = {"Authorization": "Bearer token"}
+
     ticket_id = 999
-    response = client.get(f"/tickets/{ticket_id}")
+    response = client.get(f"/tickets/{ticket_id}", headers=headers)
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket not found"}
 
 
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
 def test_get_tickets_by_game_id_not_found(mock_get_tickets_by_game_id, mock_db):
+    headers = {"Authorization": "Bearer token"}
+
     game_id = 999
-    response = client.get(f"/tickets/game/{game_id}")
+    response = client.get(f"/tickets/game/{game_id}", headers=headers)
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket not found for game ID 999"}
 
 
 @patch("routers.ticket.crud.get_tickets", return_value=[])
 def test_get_tickets_no_results(mock_get_tickets, mock_db):
-    response = client.get("/tickets")
+    headers = {"Authorization": "Bearer token"}
+
+    response = client.get("/tickets", headers=headers)
     assert response.status_code == 200
     assert response.json() == []
 
@@ -257,8 +292,10 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
 )
 def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
     """Teste para tentar desativar um ticket inexistente."""
+    headers = {"Authorization": "Bearer token"}
 
-    response = client.put("/tickets/99/validate")
+
+    response = client.put("/tickets/99/validate", headers=headers)
 
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket with id 99 not found."}
@@ -274,8 +311,10 @@ def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
 )
 def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
     """Teste para tentar desativar um ticket já desativado."""
+    headers = {"Authorization": "Bearer token"}
 
-    response = client.put("/tickets/2/validate")
+
+    response = client.put("/tickets/2/validate", headers=headers)
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket with id 2 is already deactivated."}
