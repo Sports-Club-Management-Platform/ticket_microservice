@@ -12,6 +12,8 @@ cognito_client = boto3.client(
 )
 
 
+USER_POOL_ID = os.environ.get("USER_POOL_ID")
+
 def auth_with_code(code: str, redirect_uri: str):
     """
     Authenticate using the authorization code -> returns tokens from Amazon Cognito User Pool.
@@ -87,3 +89,20 @@ def logout_with_token(access_token: str):
     else:
         print(f"Error: Error logging out: {response}")
         return False
+
+
+def get_user_info_from_user_sub(user_sub: str):
+    response = cognito_client.list_users(
+        UserPoolId=USER_POOL_ID,
+        Filter=f'sub = "{user_sub}"'
+    )
+
+    if response.get("ResponseMetadata").get("HTTPStatusCode") == 200:
+        user_attributes = response["Users"][0]["Attributes"]
+        email = user_attributes[0]["Value"]
+        name = user_attributes[2]["Value"]
+        return {"email": email, "name": name}
+    else:
+        print(f"Error: Error getting user info: {response}")
+        return None
+

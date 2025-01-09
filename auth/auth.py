@@ -19,6 +19,7 @@ jwks = JWKS.model_validate(response.json())
 
 auth = JWTBearer(jwks)
 
+
 async def get_current_user(
     credentials: JWTAuthorizationCredentials = Depends(auth),
 ) -> dict:
@@ -35,3 +36,4 @@ async def get_current_user(
         return {"username": username, "groups": groups}
     except KeyError:
         HTTPException(status_code=HTTP_403_FORBIDDEN, detail="Username missing")
+
