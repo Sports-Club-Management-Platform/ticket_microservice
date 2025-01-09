@@ -117,7 +117,7 @@ def test_buy_one_ticket_not_repeated_random_id(generate_random_user_ticket_id_fu
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()
     mock_db.refresh.assert_called_once()
-    generate_random_user_ticket_id_func.assert_called_once_with(13)
+    generate_random_user_ticket_id_func.assert_called_once_with(12)
     result = mock_db.add.call_args_list[0][0][0]
 
     assert isinstance(result, UserTicketModel)
@@ -157,8 +157,8 @@ def test_buy_one_ticket_repeated_random_id_at_first(generate_random_user_ticket_
     mock_db.commit.assert_called_once()
     mock_db.refresh.assert_called_once()
     assert generate_random_user_ticket_id_func.call_count == 2
-    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 13
-    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 13
+    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 12
 
     result = mock_db.add.call_args_list[0][0][0]
     assert isinstance(result, UserTicketModel)
@@ -195,9 +195,9 @@ def test_buy_multiple_tickets_not_repeated_random_id(generate_random_user_ticket
     assert mock_db.commit.call_count == 3
     assert mock_db.refresh.call_count == 3
     assert generate_random_user_ticket_id_func.call_count == 3
-    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 13
-    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 13
-    assert generate_random_user_ticket_id_func.call_args_list[2][0][0] == 13
+    assert generate_random_user_ticket_id_func.call_args_list[0][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[1][0][0] == 12
+    assert generate_random_user_ticket_id_func.call_args_list[2][0][0] == 12
 
     result_1 = mock_db.add.call_args_list[0][0][0]
     assert isinstance(result_1, UserTicketModel)
