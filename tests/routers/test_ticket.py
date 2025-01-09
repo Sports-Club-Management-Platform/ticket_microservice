@@ -32,7 +32,6 @@ def mock_db():
 def reset_mock_db(mock_db):
     mock_db.reset_mock()
 
-
 @patch(
     "routers.ticket.crud.post_ticket",
     return_value=TicketInDB(
