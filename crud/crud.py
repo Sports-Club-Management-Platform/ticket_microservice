@@ -78,9 +78,9 @@ async def buy_tickets(db: Session, ticket: UserTicketCreate, send_message_callba
     """
     for _ in range(ticket.quantity):
         ticket_db = UserTicketModel(**ticket.model_dump(exclude={'quantity'}))
-        random_ticket_id = generate_random_user_ticket_id(12)
+        random_ticket_id = generate_random_user_ticket_id(13)
         while db.query(UserTicketModel).filter(UserTicketModel.id == random_ticket_id).first() is not None:
-            random_ticket_id = generate_random_user_ticket_id(12)
+            random_ticket_id = generate_random_user_ticket_id(13)
         ticket_db.id = random_ticket_id
         db.add(ticket_db)
         db.commit()

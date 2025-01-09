@@ -8,7 +8,7 @@ import string
 class UserTicket(Base):
     __tablename__ = "user_tickets"
 
-    id = Column(String(12), primary_key=True, index=True)
+    id = Column(String(13), primary_key=True, index=True)
     user_id = Column(String(50), nullable=False)
     ticket_id = Column(Integer, ForeignKey('tickets.id'), nullable=False)
     unit_amount = Column(Float, nullable=False)
