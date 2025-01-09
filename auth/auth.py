@@ -19,7 +19,6 @@ jwks = JWKS.model_validate(response.json())
 
 auth = JWTBearer(jwks)
 
-
 async def get_current_user(
     credentials: JWTAuthorizationCredentials = Depends(auth),
 ) -> dict:
