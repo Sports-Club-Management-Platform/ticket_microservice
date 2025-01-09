@@ -1,3 +1,4 @@
+import sys
 from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.exceptions import HTTPException
@@ -100,7 +101,7 @@ def test_buy_one_ticket_not_repeated_random_id(generate_random_user_ticket_id_fu
         deactivated_at="",
     )
 
-    buy_tickets(mock_db, user_ticket_data)
+    buy_tickets(mock_db, user_ticket_data, lambda db, user_ticket_db: None)
 
     mock_db.add.assert_called_once()
     mock_db.commit.assert_called_once()

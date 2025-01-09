@@ -17,4 +17,4 @@ class UserTicketCreate(UserTicket):
     pass
 
 class UserTicketInDB(UserTicket):
-    id: int
+    id: str

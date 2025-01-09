@@ -17,5 +17,5 @@ class UserTicket(Base):
     deactivated_at = Column(String(500), nullable=True)
 
 def generate_random_user_ticket_id(id_length: int) -> str:
-    secure_chars = string.ascii_uppercase + string.digits
+    secure_chars = string.digits
     return ''.join(secrets.choice(secure_chars) for _ in range(id_length))

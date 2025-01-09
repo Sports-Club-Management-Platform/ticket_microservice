@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Callable
 
 from fastapi import HTTPException
 
@@ -66,10 +67,11 @@ def update_ticket(db: Session, ticket: Ticket, ticket_update: TicketUpdate):
     return ticket
 
 
-def buy_tickets(db: Session, ticket: UserTicketCreate):
+async def buy_tickets(db: Session, ticket: UserTicketCreate, send_message_callback: Callable):
     """
     Buy various ticket and assign them different generated ids.
 
+    :param send_message_callback: callback to send message to email microservice
     :param db: Database session
     :param ticket: Ticket to buy
     :return: Ticket bought
@@ -84,6 +86,7 @@ def buy_tickets(db: Session, ticket: UserTicketCreate):
         db.commit()
         db.refresh(ticket_db)
         logger.info(f"Ticket bought: {ticket_db.__dict__}")
+        await send_message_callback(db, ticket_db)
 
 
 def get_tickets_by_user_id(db: Session, user_id: int):

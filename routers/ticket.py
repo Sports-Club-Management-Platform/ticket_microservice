@@ -10,6 +10,10 @@ from typing import List
 import aio_pika
 import stripe
 from aio_pika import Message
+
+from auth.JWTBearer import JWTAuthorizationCredentials
+from auth.auth import auth
+from auth.user_auth import user_info_with_token, get_user_info_from_user_sub
 from crud import crud
 from db.create_database import create_tables
 from db.database import get_db
@@ -22,6 +26,7 @@ from schemas.userticket import (
     UserTicketInDB,
     UserTicket,
 )
+from models.userticket import UserTicket as UserTicketModel
 
 router = APIRouter(tags=["Tickets"])
 
@@ -60,7 +65,7 @@ async def lifespan(app: FastAPI):
         async with payments_queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
-                    print("Received message:", message.body)
+                    logger.info(f"Received message: {message.body}")
                     # Process the message here
                     await process_message(message.body)
     
@@ -84,15 +89,32 @@ async def process_message(body):
         )
         db = next(get_db())
         try:
-            crud.buy_tickets(db, ticket)
+            await crud.buy_tickets(db, ticket, process_ticket)
         finally:
             db.close()
 
-async def send_message(message: dict):
-    logger.info(f"Sending message: {message} to tickets.messages")
+
+async def process_ticket(db, user_ticket_db: UserTicketModel):
+    user_info = get_user_info_from_user_sub(user_ticket_db.user_id)
+    if user_info is None:
+        logger.info(f"Found user_info is None for sub {user_ticket_db.user_id}")
+    else:
+        main_ticket = crud.get_ticket_by_id(db, ticket_id=user_ticket_db.ticket_id)
+        await send_message({
+            "user_name": user_info["name"],
+            "ticket_id": user_ticket_db.id,
+            "ticket_name": main_ticket.name,
+            "ticket_price": main_ticket.price,
+            "to_email": user_info["email"],
+        }, "EMAILS")
+
+
+
+async def send_message(message: dict, routing_key: str):
+    logger.info(f"Sending message: {message} to {routing_key}")
     await exchange.publish(
         message=Message(body=json.dumps(message).encode()),
-        routing_key="tickets.messages"
+        routing_key=routing_key
     )
 
 
@@ -163,7 +185,7 @@ async def create_ticket(
         "stripe_price_id": stripe_price_id,
         "stock": ticket.stock
     }
-    await send_message(message)
+    await send_message(message, "tickets.messages")
 
     return created_ticket
 
@@ -189,7 +211,7 @@ async def update_ticket(
             "ticket_id": ticket.id,
             "stock": ticket_update.stock
         }
-        await send_message(message)
+        await send_message(message, "tickets.messages")
 
     crud.update_ticket(db, ticket, ticket_update)
 
