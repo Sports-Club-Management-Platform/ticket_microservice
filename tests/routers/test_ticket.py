@@ -30,17 +30,17 @@ def mock_db():
 def reset_mock_db(mock_db):
     mock_db.reset_mock()
 
-@pytest.fixture(autouse=True)
-def override_auth():
-    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
-        jwt_token="token",
-        header={"kid": "some_kid"},
-        claims={"sub": "user_id"},
-        signature="signature",
-        message="message",
-    )
-    yield
-    app.dependency_overrides.pop(auth, None)  
+# @pytest.fixture(autouse=True)
+# def override_auth():
+#     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+#         jwt_token="token",
+#         header={"kid": "some_kid"},
+#         claims={"sub": "user_id"},
+#         signature="signature",
+#         message="message",
+#     )
+#     yield
+#     app.dependency_overrides.pop(auth, None)  
 
 @patch(
     "routers.ticket.crud.post_ticket",
@@ -70,6 +70,13 @@ def override_auth():
 def test_post_ticket(
     mock_file_link, mock_file, mock_product, mock_post_ticket, mock_db
 ):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     payload = {
@@ -91,7 +98,13 @@ def test_post_ticket(
 
 # Teste para extensão de arquivo inválida
 def test_create_ticket_invalid_extension():
-
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     payload = {
@@ -115,6 +128,13 @@ def test_create_ticket_invalid_extension():
 
 # Teste para tipo MIME inválido
 def test_create_ticket_invalid_mime_type():
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     payload = {
@@ -136,6 +156,13 @@ def test_create_ticket_invalid_mime_type():
 
 # Teste para tamanho de arquivo excedido
 def test_create_ticket_file_too_large():
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     payload = {
@@ -171,6 +198,14 @@ def test_create_ticket_file_too_large():
 @patch("routers.ticket.crud.update_ticket", return_value=None)
 @patch("routers.ticket.stripe.Product.modify")
 def test_update_ticket(mock_modify, mock_update_ticket, mock_get_ticket_by_id, mock_db):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
+
     headers = {"Authorization": "Bearer token"}
 
     payload = {"name": "New Name", "description": "Updated description"}
@@ -207,6 +242,13 @@ def test_update_ticket(mock_modify, mock_update_ticket, mock_get_ticket_by_id, m
 # Teste para erro em atualização de ticket
 @patch("routers.ticket.crud.get_ticket_by_id", return_value=None)
 def test_update_ticket_not_found(mock_get_ticket_by_id, mock_db):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     payload = {"name": "New Name"}
@@ -222,6 +264,13 @@ def test_update_ticket_not_found(mock_get_ticket_by_id, mock_db):
 # Testes para outras rotas
 @patch("routers.ticket.crud.get_ticket_by_id", return_value=None)
 def test_get_ticket_by_id_not_found(mock_get_ticket_by_id, mock_db):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     ticket_id = 999
@@ -232,6 +281,13 @@ def test_get_ticket_by_id_not_found(mock_get_ticket_by_id, mock_db):
 
 @patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
 def test_get_tickets_by_game_id_not_found(mock_get_tickets_by_game_id, mock_db):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     game_id = 999
@@ -242,6 +298,13 @@ def test_get_tickets_by_game_id_not_found(mock_get_tickets_by_game_id, mock_db):
 
 @patch("routers.ticket.crud.get_tickets", return_value=[])
 def test_get_tickets_no_results(mock_get_tickets, mock_db):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
 
     response = client.get("/tickets", headers=headers)
@@ -292,8 +355,14 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
 )
 def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
     """Teste para tentar desativar um ticket inexistente."""
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
-
 
     response = client.put("/tickets/99/validate", headers=headers)
 
@@ -311,8 +380,14 @@ def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
 )
 def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
     """Teste para tentar desativar um ticket já desativado."""
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
     headers = {"Authorization": "Bearer token"}
-
 
     response = client.put("/tickets/2/validate", headers=headers)
 
