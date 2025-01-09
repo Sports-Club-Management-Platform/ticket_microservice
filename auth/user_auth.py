@@ -11,6 +11,7 @@ cognito_client = boto3.client(
     "cognito-idp", region_name=os.getenv("AWS_REGION", "us-east-1")
 )
 
+
 USER_POOL_ID = os.environ.get("USER_POOL_ID")
 
 def auth_with_code(code: str, redirect_uri: str):
@@ -104,3 +105,4 @@ def get_user_info_from_user_sub(user_sub: str):
     else:
         print(f"Error: Error getting user info: {response}")
         return None
+

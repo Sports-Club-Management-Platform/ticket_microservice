@@ -20,6 +20,11 @@ from db.database import get_db
 from fastapi import (APIRouter, Depends, FastAPI, Form, HTTPException,
                      UploadFile)
 from sqlalchemy.orm import Session
+from auth.auth import jwks, get_current_user
+from auth.JWTBearer import JWTAuthorizationCredentials, JWTBearer
+
+from models.ticket import Ticket as TicketModel
+from models.userticket import UserTicket as UserTicketModel
 from schemas.ticket import TicketCreate, TicketUpdate, TicketInDB
 from schemas.userticket import (
     UserTicketCreate,
@@ -117,8 +122,10 @@ async def send_message(message: dict, routing_key: str):
         routing_key=routing_key
     )
 
+auth = JWTBearer(jwks)
 
-@router.post("/tickets", response_model=TicketInDB)
+
+@router.post("/tickets", response_model=TicketInDB, dependencies=[Depends(auth)])
 async def create_ticket(
     image: UploadFile,
     game_id: int = Form(...),
@@ -190,7 +197,7 @@ async def create_ticket(
     return created_ticket
 
 
-@router.put("/tickets/{ticket_id}", response_model=TicketInDB)
+@router.put("/tickets/{ticket_id}", response_model=TicketInDB, dependencies=[Depends(auth)])
 async def update_ticket(
     ticket_id: int, ticket_update: TicketUpdate, db: Session = Depends(get_db)
 ):
@@ -225,17 +232,17 @@ async def update_ticket(
     return ticket
 
 
-@router.post("/tickets/buy", response_model=UserTicketInDB)
+@router.post("/tickets/buy", response_model=UserTicketInDB, dependencies=[Depends(auth)])
 def buy_ticket_endpoint(ticket: UserTicketCreate, db: Session = Depends(get_db)):
     return crud.buy_tickets(db, ticket)
 
 
-@router.get("/tickets/user/{user_id}", response_model=List[UserTicketInDB])
+@router.get("/tickets/user/{user_id}", response_model=List[UserTicketInDB], dependencies=[Depends(auth)])
 def get_tickets_by_user_id_endpoint(user_id: int, db: Session = Depends(get_db)):
     return crud.get_tickets_by_user_id(db, user_id)
 
 
-@router.get("/tickets/{ticket_id}", response_model=TicketInDB)
+@router.get("/tickets/{ticket_id}", response_model=TicketInDB, dependencies=[Depends(auth)])
 def get_ticket_by_id_endpoint(ticket_id: int, db: Session = Depends(get_db)):
     ticket = crud.get_ticket_by_id(db, ticket_id)
     if ticket is None:
@@ -243,7 +250,7 @@ def get_ticket_by_id_endpoint(ticket_id: int, db: Session = Depends(get_db)):
     return ticket
 
 
-@router.get("/tickets/game/{game_id}", response_model=TicketInDB)
+@router.get("/tickets/game/{game_id}", response_model=TicketInDB, dependencies=[Depends(auth)])
 def get_tickets_by_game_id_endpoint(game_id: int, db: Session = Depends(get_db)):
     ticket = crud.get_ticket_by_game_id(db, game_id)
     if ticket is None:
@@ -253,14 +260,14 @@ def get_tickets_by_game_id_endpoint(game_id: int, db: Session = Depends(get_db))
     return ticket
 
 
-@router.get("/tickets", response_model=List[TicketInDB])
+@router.get("/tickets", response_model=List[TicketInDB], dependencies=[Depends(auth)])
 def get_tickets_endpoint(
     skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 ):
     return crud.get_tickets(db, skip, limit)
 
 
-@router.put("/tickets/{ticket_id}/validate", response_model=UserTicket)
+@router.put("/tickets/{ticket_id}/validate", response_model=UserTicket, dependencies=[Depends(auth)])
 def deactivate_ticket(ticket_id: str, db: Session = Depends(get_db)):
     ticket_id = ticket_id[:-1]
     ticket = crud.validate_ticket(db, ticket_id)
