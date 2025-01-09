@@ -64,6 +64,15 @@ def reset_mock_db(mock_db):
 def test_post_ticket_for_game_with_ticket(
         mock_file_link, mock_file, mock_product, mock_post_ticket, get_ticket_by_game_id_func, mock_db
 ):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
+    headers = {"Authorization": "Bearer token"}
+
     with patch("routers.ticket.exchange", MagicMock()) as exchange_mock:
         publish_mock = AsyncMock(return_value=None)
         exchange_mock.publish = publish_mock
@@ -88,7 +97,7 @@ def test_post_ticket_for_game_with_ticket(
         }
         files = {"image": ("image.png", io.BytesIO(b"fake_image_data"), "image/png")}
 
-        response = client.post("/tickets", data=payload, files=files)
+        response = client.post("/tickets", data=payload, files=files, headers=headers)
 
         assert response.status_code == 400
         assert response.text == '{"detail":"Ticket already exists for game with id 101"}'
@@ -124,11 +133,18 @@ def test_post_ticket_for_game_with_ticket(
     "routers.ticket.stripe.FileLink.create",
     return_value=DualAccessDict(url="https://example.com/image.jpg")
 )
-
-
 def test_post_ticket_for_game_with_no_ticket(
     mock_file_link, mock_file, mock_product, mock_post_ticket, get_ticket_by_game_id_func, mock_db
 ):
+    app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
+        jwt_token="token",
+        header={"kid": "some_kid"},
+        claims={"sub": "user_id"},
+        signature="signature",
+        message="message",
+    )
+    headers = {"Authorization": "Bearer token"}
+
     with patch("routers.ticket.exchange", MagicMock()) as exchange_mock:
         publish_mock = AsyncMock(return_value=None)
         exchange_mock.publish = publish_mock
@@ -153,7 +169,7 @@ def test_post_ticket_for_game_with_no_ticket(
         }
         files = {"image": ("image.png", io.BytesIO(b"fake_image_data"), "image/png")}
 
-        response = client.post("/tickets", data=payload, files=files)
+        response = client.post("/tickets", data=payload, files=files, headers=headers)
 
         assert response.status_code == 200
         mock_file_link.assert_called_once()
@@ -173,7 +189,8 @@ def test_post_ticket_for_game_with_no_ticket(
 
 
 # Teste para extensão de arquivo inválida
-def test_create_ticket_invalid_extension():
+@patch("routers.ticket.crud.get_ticket_by_game_id", return_value=None)
+def test_create_ticket_invalid_extension(get_ticket_by_game_id_func):
     app.dependency_overrides[auth] = lambda: JWTAuthorizationCredentials(
         jwt_token="token",
         header={"kid": "some_kid"},
