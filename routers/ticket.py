@@ -262,6 +262,7 @@ def get_tickets_endpoint(
 
 @router.put("/tickets/{ticket_id}/validate", response_model=UserTicket)
 def deactivate_ticket(ticket_id: str, db: Session = Depends(get_db)):
+    ticket_id = ticket_id[:-1]
     ticket = crud.validate_ticket(db, ticket_id)
 
     return ticket

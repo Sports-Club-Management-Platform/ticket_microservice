@@ -349,7 +349,7 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
 
     mock_validate_ticket.return_value = mock_ticket
 
-    response = client.put("/tickets/1/validate")
+    response = client.put("/tickets/1234/validate")
 
     assert response.status_code == 200
 
@@ -365,7 +365,7 @@ def test_deactivate_ticket_success(mock_validate_ticket, mock_db):
     assert response_data["is_active"] is False
     assert response_data["deactivated_at"] is not None
 
-    mock_validate_ticket.assert_called_once_with(mock_db, '1')
+    mock_validate_ticket.assert_called_once_with(mock_db, '123')
 
 
 @patch(
@@ -380,7 +380,7 @@ def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
     assert response.status_code == 404
     assert response.json() == {"detail": "Ticket with id 99 not found."}
 
-    mock_validate_ticket.assert_called_once_with(mock_db, '99')
+    mock_validate_ticket.assert_called_once_with(mock_db, '9')
 
 
 @patch(
@@ -392,7 +392,7 @@ def test_deactivate_ticket_not_found(mock_validate_ticket, mock_db):
 def test_deactivate_ticket_already_deactivated(mock_validate_ticket, mock_db):
     """Teste para tentar desativar um ticket já desativado."""
 
-    response = client.put("/tickets/2/validate")
+    response = client.put("/tickets/22/validate")
 
     assert response.status_code == 400
     assert response.json() == {"detail": "Ticket with id 2 is already deactivated."}
